@@ -1,0 +1,5 @@
+{
+  "name": "Lumina Workspace",
+  "description": "A next-generation AI workspace featuring intelligent chat and creative image generation using Google's Gemini models.",
+  "requestFramePermissions": []
+}

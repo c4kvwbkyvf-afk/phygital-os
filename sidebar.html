@@ -1,0 +1,123 @@
+!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; padding: 15px; color: #1e293b; background: #f8fafc; }
+    h2 { font-size: 16px; font-weight: 600; color: #3b82f6; margin-top: 0; margin-bottom: 5px; }
+    p { font-size: 11px; color: #64748b; margin-bottom: 15px; }
+    label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; margin-top: 15px; }
+    select { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: white; font-size: 12px; }
+    button { width: 100%; padding: 10px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; margin-top: 20px; font-size: 13px; }
+    .btn-save { background: #3b82f6; color: white; }
+    .btn-save:hover { background: #2563eb; }
+    #status { margin-top: 10px; font-size: 11px; text-align: center; font-weight: bold; min-height: 20px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h2>⚙️ Configuration Phygital</h2>
+  <p>Dites au logiciel où se trouvent vos données.</p>
+
+  <label>1. Onglet des Ventes</label>
+  <select id="sheetSelector" onchange="loadColumns()">
+    <option value="">Chargement...</option>
+  </select>
+
+  <div id="mappingSection" class="hidden">
+    <div style="border-top:1px solid #e2e8f0; margin-top:15px; padding-top:10px;"></div>
+    
+    <label>💰 Colonne Prix (Montant)</label>
+    <select id="colPrice"></select>
+
+    <label>🔄 Colonne Statut (Livré/Retour...)</label>
+    <select id="colStatus"></select>
+
+    <label>👤 Colonne Nom Client</label>
+    <select id="colName"></select>
+
+    <label>📍 Colonne Wilaya</label>
+    <select id="colWilaya"></select>
+
+    <label>📅 Colonne Date</label>
+    <select id="colDate"></select>
+    
+    <button class="btn-save" onclick="saveConfig()">💾 SAUVEGARDER & APPLIQUER</button>
+  </div>
+
+  <div id="status"></div>
+
+  <script>
+    // Démarrage : Charger la liste des onglets
+    window.onload = function() {
+      document.getElementById('status').innerText = "Chargement des onglets...";
+      google.script.run.withSuccessHandler(remplirOnglets).getSheetNames();
+    };
+
+    function remplirOnglets(sheets) {
+      const select = document.getElementById('sheetSelector');
+      select.innerHTML = '<option value="">-- Choisir votre onglet --</option>';
+      sheets.forEach(s => {
+        // On ignore les onglets système
+        if(s !== "PHYGITAL_CONFIG" && s !== "Index" && s !== "Sidebar") {
+           select.innerHTML += '<option value="'+s+'">'+s+'</option>';
+        }
+      });
+      document.getElementById('status').innerText = "";
+    }
+
+    // Charger les colonnes quand on choisit un onglet
+    function loadColumns() {
+      const sheetName = document.getElementById('sheetSelector').value;
+      if(!sheetName) {
+        document.getElementById('mappingSection').classList.add('hidden');
+        return;
+      }
+      
+      document.getElementById('status').innerText = "Lecture des colonnes...";
+      google.script.run.withSuccessHandler(afficherColonnes).getSheetHeaders(sheetName);
+    }
+
+    function afficherColonnes(headers) {
+      document.getElementById('status').innerText = "";
+      document.getElementById('mappingSection').classList.remove('hidden');
+      
+      const selects = ['colPrice', 'colStatus', 'colName', 'colWilaya', 'colDate'];
+      let optionsHtml = '<option value="">-- Sélectionner --</option>';
+      
+      headers.forEach(h => {
+        optionsHtml += `<option value="${h.index}">[Col ${h.index}] ${h.name}</option>`;
+      });
+
+      selects.forEach(id => document.getElementById(id).innerHTML = optionsHtml);
+    }
+
+    function saveConfig() {
+      const config = {
+        targetSheet: document.getElementById('sheetSelector').value,
+        colPrice: document.getElementById('colPrice').value,
+        colStatus: document.getElementById('colStatus').value,
+        colName: document.getElementById('colName').value,
+        colWilaya: document.getElementById('colWilaya').value,
+        colDate: document.getElementById('colDate').value
+      };
+
+      if(!config.targetSheet || !config.colPrice || !config.colStatus) {
+        document.getElementById('status').style.color = "red";
+        document.getElementById('status').innerText = "⚠️ Le Prix et le Statut sont obligatoires !";
+        return;
+      }
+
+      document.getElementById('status').style.color = "#3b82f6";
+      document.getElementById('status').innerText = "Sauvegarde...";
+      
+      google.script.run.withSuccessHandler(function(msg) {
+        document.getElementById('status').style.color = "green";
+        document.getElementById('status').innerText = msg;
+        setTimeout(() => google.script.host.close(), 2000); // Ferme la sidebar après 2s
+      }).saveConfiguration(config);
+    }
+  </script>
+</body>
+</html>
